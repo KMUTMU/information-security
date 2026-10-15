@@ -29,6 +29,17 @@
 - Windows: certmgr.msc / `Get-ChildItem Cert:\LocalMachine\Root`. Chrome: Chrome Root Program, Firefox: Mozilla Root Store.
 
 ## 3. CA 계층과 경로 검증
+```mermaid
+flowchart TB
+    Root["Root CA<br/>trust anchor·self-signed·offline"]
+    Root --> IntA["Intermediate CA A"]
+    Root --> IntB["Intermediate CA B"]
+    IntA --> L1["leaf: www.shop.example"]
+    IntB --> L2["leaf: api.shop.example"]
+    style Root fill:#1a1a1a,color:#fff
+    style IntA fill:#ede7f6
+    style IntB fill:#ede7f6
+```
 - **Root CA**는 서버 인증서를 직접 대량 발급하지 않고 **Intermediate CA에 위임**. Root는 self-signed·offline 보호.
 - 서버는 보통 **leaf + intermediate**를 전송(Root는 client trust store에 이미 있어 안 보냄).
 
@@ -54,6 +65,15 @@
 - ⭐ 교훈: "인증서 한 장 미폐기로 즉시 해킹"이 아니라, **반복된 사고·규정 대응 실패 누적 → CA root 전체의 신뢰 상실**.
 
 ## 5. Forward Secrecy (FS) ⭐⭐
+```mermaid
+flowchart LR
+    T1["① 오늘<br/>공격자가 암호화<br/>트래픽 녹화"] --> T2["② 몇 달 뒤<br/>서버 장기<br/>private key 탈취"]
+    T2 --> T3{"③ 과거 세션키<br/>재계산 가능?"}
+    T3 -->|"FS 없음 (static RSA)"| F["복호 가능 💀"]
+    T3 -->|"FS 있음 (ECDHE)"| S["임시 a·b 삭제됨<br/>→ 복호 불가 ✅"]
+    style F fill:#ffebee
+    style S fill:#e8f5e9
+```
 - **정의**: 장기 인증키가 **나중에 유출돼도** 과거 세션 평문을 복원 못 하게.
 - 시나리오: ① 오늘 암호화 트래픽 녹화 → ② 몇 달 뒤 서버 장기 private key 탈취 → ③ 과거 세션키 재계산 가능한가?
   - **FS 없는 key transport**(정적 RSA): 장기키로 과거 premaster/session secret 복구 → 녹화 통신 노출 ❌
@@ -102,6 +122,21 @@
 | **Second-preimage resistance** (제2역상) | **원본 메시지 m** | m′≠m, H(m′)=H(m) |
 | **Collision resistance** (충돌) | **고정 메시지 없음** | (m, m′): m≠m′, H(m)=H(m′) |
 > 차이 핵심: second-preimage는 **특정 원본 m이 고정**, collision은 **아무 두 개나** 같으면 됨.
+```mermaid
+flowchart LR
+    subgraph P["Preimage (역상)"]
+        h1["h 주어짐"] -->|"m 찾기<br/>H(m)=h"| m1["?"]
+    end
+    subgraph S["Second-preimage (제2역상)"]
+        m2["m 주어짐<br/>(원본 고정)"] -->|"m′≠m 찾기<br/>H(m′)=H(m)"| m2b["?"]
+    end
+    subgraph C["Collision (충돌)"]
+        free["고정값 없음"] -->|"아무 m≠m′ 찾기<br/>H(m)=H(m′)"| pair["(m, m′)"]
+    end
+    style h1 fill:#e3f2fd
+    style m2 fill:#bbdefb
+    style free fill:#eceff1
+```
 
 ### 생일 역설(Birthday)과 충돌 강도 ⭐⭐ (수식 이해)
 - n-bit 해시 → 출력 수 N=2ⁿ. q개 해시 중 충돌 쌍 ≈ q(q-1)/2 ≈ q²/2N.
@@ -132,6 +167,13 @@
 ## 2. MAC과 HMAC ⭐⭐
 
 ### 잘못 만든 MAC — Length Extension 공격 ⭐
+```mermaid
+flowchart LR
+    M["알려진 요청 m<br/>받는사람=Bob<br/>금액=1000"] --> D["알려진 digest<br/>(= 내부 상태처럼 사용)"]
+    D --> SUF["공격자가 suffix 추가<br/>금액=9000000"]
+    SUF --> T["위조된 새 tag<br/>(secret 몰라도 생성!)"]
+    style T fill:#ffebee
+```
 - `tag = SHA-256(secret ‖ message)` (secret-prefix) 구조는 일부 해시에서 **안전하지 않음**.
 - **원리**: 공격자가 secret을 몰라도, 알려진 digest를 **내부 상태처럼** 사용해 **뒤에 데이터(suffix)를 이어 붙인 새 tag**를 계산 (`secret ‖ message ‖ 원래 padding ‖ suffix`).
 - 예: "받는사람=Bob,금액=1000" 뒤에 "금액=9000000"을 붙여 위조 (뒤 중복 field 우선 parser 가정).
@@ -143,6 +185,24 @@
 ### HMAC ⭐ (구조와 수식)
 - `HMAC(K, m) = H((K' ⊕ opad) ‖ H((K' ⊕ ipad) ‖ m))`
 - **2단계**: inner hash `H((K'⊕ipad)‖m)` → outer hash `H((K'⊕opad)‖inner)`.
+```mermaid
+flowchart TB
+    K["키 K"] --> KP["K' = K를 블록크기 B에 맞춤"]
+    KP --> IP["K' ⊕ ipad<br/>(ipad = 0x36×B)"]
+    KP --> OP["K' ⊕ opad<br/>(opad = 0x5C×B)"]
+    M["메시지 m"] --> IN
+    IP --> IN["inner = H((K'⊕ipad) ‖ m)"]
+    IN --> OUT["outer = H((K'⊕opad) ‖ inner)"]
+    OP --> OUT
+    OUT --> TAG["HMAC tag"]
+    style K fill:#bbdefb
+    style KP fill:#bbdefb
+    style IP fill:#ede7f6
+    style OP fill:#ede7f6
+    style M fill:#e3f2fd
+    style TAG fill:#1a1a1a,color:#fff
+```
+> 두 번 해시(inner→outer)로 감싸므로 digest만으로 뒤에 데이터를 이어 붙일 수 없다 → length extension 불가.
 - K' = K를 블록 크기 B에 맞춘 키. RFC 2104: ipad=0x36×B, opad=0x5C×B (공개 고정값). SHA-256 B=64바이트.
 - ⭐ **HMAC은 inner/outer hash를 분리하므로 length extension으로 연장 불가** (secret-prefix의 결함을 구조적으로 해결).
 - 예: 이체 요청 amount 변경 → 공격자는 새 tag 계산할 K가 없어 서버가 거부. (단, HMAC은 내용을 숨기지 않음 → 기밀성 필요하면 AEAD)
@@ -191,6 +251,20 @@
 
 ### 로그인 검증 (복호가 아니라 '일치 확인') ⭐
 - TLS가 record 복호 → 서버가 password 받음 → salt·cost·verifier 조회 → 입력으로 candidate verifier 계산 → **constant-time 비교** → session 발급.
+```mermaid
+flowchart TB
+    PW["입력 비밀번호<br/>(TLS로 전송·복호)"] --> CALC
+    DB["DB 레코드 조회<br/>salt · cost · verifier"] --> CALC["candidate = KDF(password, salt, cost)"]
+    DB --> CMP
+    CALC --> CMP{"candidate == 저장된 verifier ?<br/>(constant-time 비교)"}
+    CMP -->|일치| OK["세션 발급 ✅"]
+    CMP -->|불일치| NO["로그인 거부 ❌"]
+    style PW fill:#e3f2fd
+    style DB fill:#eceff1
+    style OK fill:#e8f5e9
+    style NO fill:#ffebee
+```
+> ⭐ 저장된 verifier를 **복호하지 않는다** — 입력으로 같은 KDF를 다시 돌려 **값이 같은지**만 확인.
 - ⭐ "복호하지 않는다"의 대상은 **password verifier**. 파일 복호가 필요하면 password와 **분리된 data-encryption key** 사용.
 
 ### Password KDF 비교
