@@ -25,15 +25,9 @@
 - 응용(HTTP) ↔ **TLS 1.2/1.3** ↔ TCP ↔ IP ↔ 링크. TLS는 응용과 TCP 사이에 넣은 **보호 단계(정식 계층은 아님)**.
 ```mermaid
 flowchart TB
-    APP["응용 (HTTP)"] --> TLS["TLS 1.2 / 1.3<br/>(인증·기밀성·무결성)"]
-    TLS --> TCP["TCP (정확한 전달)"]
-    TCP --> IP["IP"]
-    IP --> LINK["링크"]
-    style APP fill:#e3f2fd
-    style TLS fill:#bbdefb
-    style TCP fill:#eceff1
-    style IP fill:#eceff1
-    style LINK fill:#eceff1
+    APP["응용 · HTTP"] --> TLS["TLS 1.2 / 1.3"] --> TCP["TCP"] --> IP["IP"] --> LINK["링크"]
+    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
+    class TLS key
 ```
 > HTTPS = HTTP over TLS. TLS는 응용과 TCP **사이**에 끼운 보호 단계(IP·record 길이·시간은 못 숨김).
 - **HTTPS = HTTP over TLS**.
@@ -197,20 +191,12 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    subgraph RSA["Static RSA key exchange (과거)"]
-        direction TB
-        R1["pre-master을 서버 공개키로 암호화 전송"] --> R2["공격자가 암호문 저장"]
-        R2 --> R3["나중에 서버 장기 private key 탈취"]
-        R3 --> R4["저장분 복호 → 과거 session까지 노출 ❌"]
-    end
-    subgraph ECDHE["ECDHE (현재)"]
-        direction TB
-        E1["임시 a·b로 shared secret 생성<br/>certificate key는 서명(인증)에만"] --> E2["session 종료 후 a·b 폐기"]
-        E2 --> E3["나중에 장기 private key 탈취돼도"]
-        E3 --> E4["a·b가 없어 과거 통신 안전 ⭕<br/>(Forward Secrecy)"]
-    end
-    style R4 fill:#ffebee
-    style E4 fill:#e8f5e9
+    R1["Static RSA · pre-master을 서버 공개키로 암호화"] --> R2["공격자가 암호문 저장"] --> R3["장기 private key 탈취"] --> R4["저장분 복호 → 과거 session 노출"]
+    E1["ECDHE · 임시 a·b로 shared secret"] --> E2["session 후 a·b 폐기"] --> E3["장기 private key 탈취돼도"] --> E4["과거 통신 안전 (Forward Secrecy)"]
+    classDef bad fill:#fee2e2,stroke:#991b1b,stroke-width:2px
+    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
+    class R4 bad
+    class E4 ok
 ```
 
 > ⭐⭐ **핵심: TLS 1.3은 RSA를 없앤 게 아니라 '정적(static) RSA key exchange'를 제거했다.**

@@ -17,11 +17,7 @@
 - ⭐ **한 거래를 바꾸면 그 block의 hash와 뒤의 모든 연결이 달라진다** → 변조 탐지 (해시 체인의 무결성).
 ```mermaid
 flowchart LR
-    B100["Block #100<br/>prev: H(#99)<br/>거래들<br/>→ hash = H₁₀₀"] --> B101["Block #101<br/>prev: H₁₀₀<br/>거래들<br/>→ hash = H₁₀₁"]
-    B101 --> B102["Block #102<br/>prev: H₁₀₁<br/>거래들<br/>→ hash = H₁₀₂"]
-    style B100 fill:#e3f2fd
-    style B101 fill:#e3f2fd
-    style B102 fill:#e3f2fd
+    B100["Block #100<br/>prev: H(#99) → hash H₁₀₀"] --> B101["Block #101<br/>prev: H₁₀₀ → hash H₁₀₁"] --> B102["Block #102<br/>prev: H₁₀₁ → hash H₁₀₂"]
 ```
 > 각 block이 **앞 block의 hash**를 품으므로, 과거 거래 하나만 바꿔도 이후 모든 hash가 어긋나 변조가 드러난다.
 
@@ -58,14 +54,10 @@ flowchart LR
   - 예: 1.0 BTC input → Output0(Bob 0.4) + Output1(change: Alice 0.59998600) + fee.
 ```mermaid
 flowchart LR
-    IN["Input<br/>Alice의 기존 UTXO<br/>1.0 BTC"] --> TX["Transaction"]
-    TX --> O0["Output0 → Bob<br/>0.4 BTC"]
-    TX --> O1["Output1 → Alice (change)<br/>0.59998600 BTC"]
-    TX --> FEE["Fee<br/>0.00001400 BTC"]
-    style IN fill:#eceff1
-    style O0 fill:#e8f5e9
-    style O1 fill:#e3f2fd
-    style FEE fill:#bbdefb
+    IN["Input · Alice 기존 UTXO · 1.0 BTC"] --> TX["Transaction"]
+    TX --> O0["Output0 → Bob · 0.4 BTC"]
+    TX --> O1["Output1 → Alice change · 0.59998600 BTC"]
+    TX --> FEE["Fee · 0.00001400 BTC"]
 ```
 > 기존 UTXO를 **통째로 소비**하고 지급액·거스름돈을 **새 UTXO로 생성**. 입력 합 − 출력 합 = fee.
 
@@ -91,15 +83,16 @@ flowchart LR
 - ⭐ **전자서명은 두 거래를 Alice가 승인했다는 사실만 증명.** 어느 것을 기록할지는 **block과 합의 규칙이 결정**. 같은 chain에서 A·B는 동시에 유효 불가. 후속 block이 쌓일수록 **confirmation 증가**.
 ```mermaid
 flowchart TB
-    U["같은 UTXO<br/>(Alice 1.0 BTC)"] --> A["Tx A → Bob<br/>(Alice 서명)"]
-    U --> B["Tx B → Carol<br/>(Alice 서명)"]
-    A --> C{"합의 규칙<br/>어느 chain에 포함?"}
+    U["같은 UTXO · Alice 1.0 BTC"] --> A["Tx A → Bob"]
+    U --> B["Tx B → Carol"]
+    A --> C{"합의 규칙 · 어느 chain?"}
     B --> C
-    C -->|채택| OK["하나만 block에 확정 ✅"]
-    C -->|거부| X["나머지는 무효 ❌<br/>(같은 UTXO 재사용 불가)"]
-    style U fill:#eceff1
-    style OK fill:#e8f5e9
-    style X fill:#ffebee
+    C -->|채택| OK["하나만 block에 확정"]
+    C -->|거부| X["나머지는 무효"]
+    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
+    classDef bad fill:#fee2e2,stroke:#991b1b,stroke-width:2px
+    class OK ok
+    class X bad
 ```
 > 서명은 "둘 다 Alice가 승인했다"만 증명. **동시 유효는 불가** — block·합의 규칙이 하나만 확정.
 
@@ -108,17 +101,14 @@ flowchart TB
 - 과정: ① mempool에서 거래 선택 ② block 구성(거래+previous hash) ③ **nonce를 바꾸며 double SHA-256** ④ **target(hash 상한) 이하면** 전파 ⑤ node가 규칙·PoW·거래 독립 검증.
 ```mermaid
 flowchart TB
-    MP["① mempool에서<br/>거래 선택"] --> BLK["② block 구성<br/>(거래 + previous hash + nonce)"]
-    BLK --> H["③ double SHA-256<br/>(header)"]
+    MP["① mempool 거래 선택"] --> BLK["② block 구성 · 거래+prev hash+nonce"]
+    BLK --> H["③ double SHA-256"]
     H --> CMP{"④ hash < target ?"}
     CMP -->|아니오| INC["nonce += 1"]
     INC --> H
-    CMP -->|예| PROP["전파(broadcast)"]
-    PROP --> VER["⑤ full node 독립 검증<br/>(규칙·PoW·거래)"]
-    style MP fill:#eceff1
-    style CMP fill:#fff3e0
-    style PROP fill:#e8f5e9
-    style VER fill:#e8f5e9
+    CMP -->|예| PROP["⑤ 전파"] --> VER["⑥ full node 독립 검증"]
+    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
+    class VER ok
 ```
 > 평균 시도 ≈ 2ᵈ. 성공한 block도 **node 검증을 통과해야** 체인에 반영.
 - ⭐ **어떤 chain을 따르는가**: 유효한 chain 중 **누적 PoW가 가장 큰 chain**.
@@ -174,19 +164,17 @@ while True:
 > 직관: 2점이면 직선(1차) 유일 결정, 1점이면 무한한 직선 가능. k점이면 (k-1)차 다항식 유일 결정.
 ```mermaid
 flowchart TB
-    S["비밀 S = 5<br/>(y절편 = f(0))"] --> F["다항식 f(x) = 5 + 4x (mod 17)"]
+    S(["비밀 S = 5 = f(0)"]) --> F["f(x) = 5 + 4x (mod 17)"]
     F --> P1["share1 = (1, 9)"]
     F --> P2["share2 = (2, 13)"]
     F --> P3["share3 = (3, 0)"]
-    P1 --> R["아무 2개 → Lagrange 보간<br/>→ 유일한 직선 → f(0)=5 복구 ✅"]
+    P1 --> R["아무 2개 → Lagrange 보간 → f(0)=5 복구"]
     P2 --> R
     P3 -.-> R
-    style S fill:#ede7f6
-    style F fill:#bbdefb
-    style P1 fill:#e3f2fd
-    style P2 fill:#e3f2fd
-    style P3 fill:#e3f2fd
-    style R fill:#e8f5e9
+    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
+    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
+    class S key
+    class R ok
 ```
 > (2,3): 비밀=1차 다항식 상수항. **2점이면 직선 유일 → 복구**, 1점만으론 가능한 직선이 무한 → **정보 0(perfect secrecy)**.
 
