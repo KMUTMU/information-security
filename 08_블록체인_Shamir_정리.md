@@ -15,11 +15,6 @@
 - **블록체인 = 거래 묶음을 이전 block의 hash로 연결한 복제 장부.**
 - **Block**: 일정 기간 거래 + 검증 정보 묶음. **Previous block hash**: 앞 block 내용을 가리키는 암호학적 요약값.
 - ⭐ **한 거래를 바꾸면 그 block의 hash와 뒤의 모든 연결이 달라진다** → 변조 탐지 (해시 체인의 무결성).
-```mermaid
-flowchart LR
-    B100["Block #100<br/>prev: H(#99) → hash H₁₀₀"] --> B101["Block #101<br/>prev: H₁₀₀ → hash H₁₀₁"] --> B102["Block #102<br/>prev: H₁₀₁ → hash H₁₀₂"]
-```
-> 각 block이 **앞 block의 hash**를 품으므로, 과거 거래 하나만 바꿔도 이후 모든 hash가 어긋나 변조가 드러난다.
 
 ### Blockchain ≠ Bitcoin ≠ Mining ⭐ (포함관계 아니라 역할이 다름)
 | 용어 | 역할 |
@@ -52,14 +47,6 @@ flowchart LR
 - **UTXO (Unspent Transaction Output)**: 아직 소비되지 않은 거래 출력. '누가 얼마를 쓸 수 있는지' 기록한 금액 단위. 다음 거래의 input으로 쓰기 전까지 UTXO.
 - **지갑 잔액 = 보유 UTXO의 합계.** 기존 UTXO 전체를 소비하고 **지급액 + 거스름돈(change) UTXO를 새로 생성**.
   - 예: 1.0 BTC input → Output0(Bob 0.4) + Output1(change: Alice 0.59998600) + fee.
-```mermaid
-flowchart LR
-    IN["Input · Alice 기존 UTXO · 1.0 BTC"] --> TX["Transaction"]
-    TX --> O0["Output0 → Bob · 0.4 BTC"]
-    TX --> O1["Output1 → Alice change · 0.59998600 BTC"]
-    TX --> FEE["Fee · 0.00001400 BTC"]
-```
-> 기존 UTXO를 **통째로 소비**하고 지급액·거스름돈을 **새 UTXO로 생성**. 입력 합 − 출력 합 = fee.
 
 ## 7. Transaction Fee ⭐
 - **Fee = Σ input values − Σ output values** (거래 생성자가 제안).
@@ -81,36 +68,10 @@ flowchart LR
 - **정의**: 동일 UTXO를 서로 다른 두 transaction의 input으로 사용하는 시도.
 - Alice가 A(→Bob), B(→Carol)를 둘 다 서명해 전파 → Node들이 다른 걸 먼저 봄.
 - ⭐ **전자서명은 두 거래를 Alice가 승인했다는 사실만 증명.** 어느 것을 기록할지는 **block과 합의 규칙이 결정**. 같은 chain에서 A·B는 동시에 유효 불가. 후속 block이 쌓일수록 **confirmation 증가**.
-```mermaid
-flowchart TB
-    U["같은 UTXO · Alice 1.0 BTC"] --> A["Tx A → Bob"]
-    U --> B["Tx B → Carol"]
-    A --> C{"합의 규칙 · 어느 chain?"}
-    B --> C
-    C -->|채택| OK["하나만 block에 확정"]
-    C -->|거부| X["나머지는 무효"]
-    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
-    classDef bad fill:#fee2e2,stroke:#991b1b,stroke-width:2px
-    class OK ok
-    class X bad
-```
-> 서명은 "둘 다 Alice가 승인했다"만 증명. **동시 유효는 불가** — block·합의 규칙이 하나만 확정.
 
 ## 11. Mining · Proof of Work (PoW) ⭐⭐
 - **채굴 = 복호가 아니라 target 이하의 header hash를 찾는 반복 탐색.**
 - 과정: ① mempool에서 거래 선택 ② block 구성(거래+previous hash) ③ **nonce를 바꾸며 double SHA-256** ④ **target(hash 상한) 이하면** 전파 ⑤ node가 규칙·PoW·거래 독립 검증.
-```mermaid
-flowchart TB
-    MP["① mempool 거래 선택"] --> BLK["② block 구성 · 거래+prev hash+nonce"]
-    BLK --> H["③ double SHA-256"]
-    H --> CMP{"④ hash < target ?"}
-    CMP -->|아니오| INC["nonce += 1"]
-    INC --> H
-    CMP -->|예| PROP["⑤ 전파"] --> VER["⑥ full node 독립 검증"]
-    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
-    class VER ok
-```
-> 평균 시도 ≈ 2ᵈ. 성공한 block도 **node 검증을 통과해야** 체인에 반영.
 - ⭐ **어떤 chain을 따르는가**: 유효한 chain 중 **누적 PoW가 가장 큰 chain**.
 - **Confirmation**: 거래 포함 block 위에 후속 block이 쌓인 정도. 많을수록 재구성 위험↓.
 - Miner 보상: coinbase transaction으로 subsidy + fee 청구.
@@ -162,21 +123,6 @@ while True:
   - P₁=(1,9)만 알 때: S=5,a=4 / S=8,a=1 / S=12,a=14 ... 모두 `?+?≡9`를 만족 → **가능한 secret이 하나로 안 좁혀짐**.
 - ⭐ **일반 (k,n)**: **degree k-1 다항식** 사용. **k-1개 이하 share는 secret 정보를 주지 않음**. (k개 모여야 복구)
 > 직관: 2점이면 직선(1차) 유일 결정, 1점이면 무한한 직선 가능. k점이면 (k-1)차 다항식 유일 결정.
-```mermaid
-flowchart TB
-    S(["비밀 S = 5 = f(0)"]) --> F["f(x) = 5 + 4x (mod 17)"]
-    F --> P1["share1 = (1, 9)"]
-    F --> P2["share2 = (2, 13)"]
-    F --> P3["share3 = (3, 0)"]
-    P1 --> R["아무 2개 → Lagrange 보간 → f(0)=5 복구"]
-    P2 --> R
-    P3 -.-> R
-    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
-    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
-    class S key
-    class R ok
-```
-> (2,3): 비밀=1차 다항식 상수항. **2점이면 직선 유일 → 복구**, 1점만으론 가능한 직선이 무한 → **정보 0(perfect secrecy)**.
 
 ## 4. 활용과 한계
 - **활용**: 암호키·복구키 조직별 분산 보관, 재해복구 2-of-3 승인, 서로 다른 장소 offline backup, 단일 보관자 위험 완화.

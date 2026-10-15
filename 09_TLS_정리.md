@@ -23,13 +23,6 @@
 
 ### 프로토콜 스택에서 TLS 위치
 - 응용(HTTP) ↔ **TLS 1.2/1.3** ↔ TCP ↔ IP ↔ 링크. TLS는 응용과 TCP 사이에 넣은 **보호 단계(정식 계층은 아님)**.
-```mermaid
-flowchart TB
-    APP["응용 · HTTP"] --> TLS["TLS 1.2 / 1.3"] --> TCP["TCP"] --> IP["IP"] --> LINK["링크"]
-    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
-    class TLS key
-```
-> HTTPS = HTTP over TLS. TLS는 응용과 TCP **사이**에 끼운 보호 단계(IP·record 길이·시간은 못 숨김).
 - **HTTPS = HTTP over TLS**.
 - ⭐ TLS를 써도 **IP 주소·record 길이·시간 정보는 숨기지 않음**.
 
@@ -93,21 +86,6 @@ flowchart TB
 ⑤ (Client) ChangeCipherSpec, {Finished}          │ (서버 Finished 수신)
 ⑥ (Server) ChangeCipherSpec, {Finished}          ┘  ④를 받은 뒤 서버가 공유비밀 계산
 ⑦ {HTTP 요청}  ← 총 2 RTT 뒤 전송
-```
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    Note over C,S: 1번째 왕복 (RTT 1)
-    C->>S: ① ClientHello (client_random, cipher_suites, SNI)
-    S->>C: ② ServerHello + Certificate (server_random)
-    S->>C: ③ ServerKeyExchange(B + RSA서명) + ServerHelloDone
-    Note over C,S: 2번째 왕복 (RTT 2)
-    C->>S: ④ ClientKeyExchange (A)
-    C->>S: ⑤ ChangeCipherSpec, {Finished}
-    S->>C: ⑥ ChangeCipherSpec, {Finished}
-    Note over C,S: 여기부터 암호화 채널 성립
-    C->>S: ⑦ {HTTP 요청} — 총 2 RTT 뒤
 ```
 - RTT = Round-Trip Time(왕복 시간). RTT 50ms면 HTTP 전 TLS 대기 ≈ **100ms**(2 RTT).
 - `{ }`는 암호화. 📝 필기(정확): **서버에 대한 인증 O, 클라이언트에 대한 인증 X**(일반 서버 인증). 키 교환은 **DH-key 교환(ECDHE)** 사용, 과거엔 RSA도.
@@ -188,16 +166,6 @@ sequenceDiagram
 | 나중에 서버 certificate private key 탈취 | shared secret은 임시 a·b에서 생성 |
 | 저장한 encrypted pre-master secret 복호 | 나중에 장기 private key가 탈취돼도 |
 | → **과거 session까지 복호 가능** ❌ | → a·b가 이미 삭제돼 **과거 통신 안전** ⭕ (Forward Secrecy) |
-
-```mermaid
-flowchart TB
-    R1["Static RSA · pre-master을 서버 공개키로 암호화"] --> R2["공격자가 암호문 저장"] --> R3["장기 private key 탈취"] --> R4["저장분 복호 → 과거 session 노출"]
-    E1["ECDHE · 임시 a·b로 shared secret"] --> E2["session 후 a·b 폐기"] --> E3["장기 private key 탈취돼도"] --> E4["과거 통신 안전 (Forward Secrecy)"]
-    classDef bad fill:#fee2e2,stroke:#991b1b,stroke-width:2px
-    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
-    class R4 bad
-    class E4 ok
-```
 
 > ⭐⭐ **핵심: TLS 1.3은 RSA를 없앤 게 아니라 '정적(static) RSA key exchange'를 제거했다.**
 > - RSA는 TLS 1.3에서도 **인증서와 RSASSA-PSS 서명**에 여전히 사용 가능.

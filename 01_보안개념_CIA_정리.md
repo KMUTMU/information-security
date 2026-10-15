@@ -8,21 +8,6 @@
 
 보안 = "가치 있는 자산이 **허용된 방식으로만** 사용되게 하는 것". 단순히 '공격을 막는 기술'보다 넓은 개념 (무엇을 지킬지, 누구에게 무엇을 허용할지, 실패를 얼마나 감수할지를 함께 결정).
 
-### 📊 보안 용어의 연결 구조 (PPT: 자산→위협→취약점→위험→통제)
-```mermaid
-flowchart LR
-    T["위협"] -->|악용| V["취약점"]
-    V --> AT["공격"]
-    AT --> IM["영향"]
-    A["자산"] --> IM
-    IM --> R(["위험"])
-    C["통제"] -.->|감소| R
-    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
-    class R key
-```
-> 읽는 법: **위협**이 **취약점**을 악용해 **자산**을 **공격** → **영향** 발생. 이 전부가 **위험**(가능성 × 영향)으로 종합되고, **통제**가 위험을 줄인다.
-> 읽는 법: **위협**이 **취약점**을 통해 **자산**을 공격 → **영향** 발생. 이 전부가 **위험**으로 종합되고, **통제**가 위험을 줄인다. (1주차 결론 문장과 동일)
-
 ### 7가지 핵심 용어 (순서와 구분이 중요)
 
 | 용어 | 정의 | 핵심 질문 |
@@ -53,21 +38,6 @@ flowchart LR
 ---
 
 ## 2. CIA — 보안의 3대 목표
-
-### 📊 CIA Triad (보안의 세 기둥)
-```mermaid
-flowchart TB
-    CIA(["보안 목표"]) --> C["기밀성<br/>Confidentiality"]
-    CIA --> I["무결성<br/>Integrity"]
-    CIA --> A["가용성<br/>Availability"]
-    C --- Cd["허가받지 않은 공개 차단"]
-    I --- Id["부적절한 변경·파괴 차단"]
-    A --- Ad["필요할 때 신뢰성 있게 사용"]
-    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
-    classDef note fill:#f8fafc,stroke:#cbd5e1
-    class CIA key
-    class Cd,Id,Ad note
-```
 
 CIA = 시스템이 유지해야 할 **최소 보안 요구** = "허용된 상태"의 정의.
 
@@ -143,19 +113,15 @@ CIA = 시스템이 유지해야 할 **최소 보안 요구** = "허용된 상태
 > **핵심**: 세 유형이 서로의 실패를 보완. 한 종류만 강하면 **단일 실패점(SPOF)**이 남는다.
 
 ### 통제의 4가지 기능 (예방만으로 부족)
-```mermaid
-flowchart LR
-    P["예방<br/>Prevent"] --> D["탐지<br/>Detect"] --> R["대응<br/>Respond"] --> RC["복구<br/>Recover"]
 ```
-> 예방(접근통제·패치) → 탐지(로그·IDS·EDR) → 대응(격리·통보·포렌식) → 복구(백업·재구축). 예방만으로는 부족하고 네 기능이 이어져야 한다.
+예방(Prevent) → 탐지(Detect) → 대응(Respond) → 복구(Recover)
+접근통제·패치     로그·IDS·EDR    격리·차단·통보   백업·재구축·복원
+·세그멘테이션                     ·포렌식          ·개선
+```
 
 ### 심층방어 (Defense in Depth)
 - 서로 다른 실패 가정을 **겹치는** 것. 각 층은 같은 실패를 반복하지 않고 **다른 가정·관측·복구 경로**를 제공.
-```mermaid
-flowchart TB
-    L1["① 정책·거버넌스"] --> L2["② 신원·권한"] --> L3["③ 네트워크·시스템"] --> L4["④ 애플리케이션·데이터"] --> L5["⑤ 탐지·대응·복구"]
-```
-> 한 층이 뚫려도 다음 층이 **다른 가정**으로 막는다. 양파처럼 겹친 방어.
+- 계층: 정책·거버넌스 → 신원·권한 → 네트워크·시스템 → 애플리케이션·데이터 → 탐지·대응·복구
 
 ### 설계 원칙 (기술이 바뀌어도 살아남는 질문)
 | 원칙 | 의미 |
@@ -168,19 +134,15 @@ flowchart TB
 > 📝 필기 보강: CISO = Chief Information Security Officer (최고정보보호책임자).
 
 ### NIST CSF 2.0 — 보안 수명주기 (6기능, 동시 반복)
-```mermaid
-flowchart LR
-    ID["IDENTIFY"] --> PR["PROTECT"] --> DE["DETECT"] --> RE["RESPOND"] --> RC["RECOVER"]
-    RC -.반복.-> ID
-    G(["GOVERN · 2024 신규"]) --- ID
-    G --- PR
-    G --- DE
-    G --- RE
-    G --- RC
-    classDef key fill:#ede7f6,stroke:#5e35b1,stroke-width:2px
-    class G key
 ```
-> ⭐ GOVERN(책임·정책·위험)이 **중심**에서 나머지 5기능을 감독. CSF 2.0은 2024년 GOVERN을 추가해 보안을 **경영·책임의 문제**로 분명히 함. 기능들은 순차가 아니라 **동시 반복**되는 수명주기.
+GOVERN(책임·정책·위험 우선순위) ← 2024년 신규 추가
+IDENTIFY(자산·의존성·위험 파악)
+PROTECT(접근·데이터·플랫폼 보호)
+DETECT(이상·침해 발견·분석)
+RESPOND(격리·통보·대응 조정)
+RECOVER(복구·개선·재발방지)
+```
+> ⭐ CSF 2.0은 2024년에 **GOVERN**을 추가해 보안을 **경영·책임의 문제**로 분명히 함. (시험에 나올 만한 포인트)
 
 > 📝 필기 보강: SBOM = Software Bill of Materials (소프트웨어 구성요소 명세서).
 

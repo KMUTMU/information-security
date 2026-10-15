@@ -29,15 +29,6 @@
 - Windows: certmgr.msc / `Get-ChildItem Cert:\LocalMachine\Root`. Chrome: Chrome Root Program, Firefox: Mozilla Root Store.
 
 ## 3. CA 계층과 경로 검증
-```mermaid
-flowchart TB
-    Root["Root CA · self-signed · offline"] --> IntA["Intermediate CA A"]
-    Root --> IntB["Intermediate CA B"]
-    IntA --> L1["leaf: www.shop.example"]
-    IntB --> L2["leaf: api.shop.example"]
-    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
-    class Root key
-```
 - **Root CA**는 서버 인증서를 직접 대량 발급하지 않고 **Intermediate CA에 위임**. Root는 self-signed·offline 보호.
 - 서버는 보통 **leaf + intermediate**를 전송(Root는 client trust store에 이미 있어 안 보냄).
 
@@ -63,16 +54,6 @@ flowchart TB
 - ⭐ 교훈: "인증서 한 장 미폐기로 즉시 해킹"이 아니라, **반복된 사고·규정 대응 실패 누적 → CA root 전체의 신뢰 상실**.
 
 ## 5. Forward Secrecy (FS) ⭐⭐
-```mermaid
-flowchart LR
-    T1["① 오늘 트래픽 녹화"] --> T2["② 몇 달 뒤 장기 private key 탈취"] --> T3{"③ 과거 세션키 재계산?"}
-    T3 -->|"static RSA"| F["복호 가능"]
-    T3 -->|"ECDHE"| S["임시 a·b 삭제 → 복호 불가"]
-    classDef bad fill:#fee2e2,stroke:#991b1b,stroke-width:2px
-    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
-    class F bad
-    class S ok
-```
 - **정의**: 장기 인증키가 **나중에 유출돼도** 과거 세션 평문을 복원 못 하게.
 - 시나리오: ① 오늘 암호화 트래픽 녹화 → ② 몇 달 뒤 서버 장기 private key 탈취 → ③ 과거 세션키 재계산 가능한가?
   - **FS 없는 key transport**(정적 RSA): 장기키로 과거 premaster/session secret 복구 → 녹화 통신 노출 ❌
@@ -121,13 +102,6 @@ flowchart LR
 | **Second-preimage resistance** (제2역상) | **원본 메시지 m** | m′≠m, H(m′)=H(m) |
 | **Collision resistance** (충돌) | **고정 메시지 없음** | (m, m′): m≠m′, H(m)=H(m′) |
 > 차이 핵심: second-preimage는 **특정 원본 m이 고정**, collision은 **아무 두 개나** 같으면 됨.
-```mermaid
-flowchart TB
-    P["Preimage · h 주어짐 → m 찾기 (H(m)=h)"]
-    S["Second-preimage · m 주어짐 → m′≠m 찾기 (H(m′)=H(m))"]
-    C["Collision · 고정값 없음 → 아무 m≠m′ 찾기 (H(m)=H(m′))"]
-```
-> second-preimage는 **특정 원본 m이 고정**, collision은 **아무 두 개나** 같으면 됨 — 이 차이가 핵심.
 
 ### 생일 역설(Birthday)과 충돌 강도 ⭐⭐ (수식 이해)
 - n-bit 해시 → 출력 수 N=2ⁿ. q개 해시 중 충돌 쌍 ≈ q(q-1)/2 ≈ q²/2N.
@@ -158,13 +132,6 @@ flowchart TB
 ## 2. MAC과 HMAC ⭐⭐
 
 ### 잘못 만든 MAC — Length Extension 공격 ⭐
-```mermaid
-flowchart LR
-    M["알려진 요청 m · 금액=1000"] --> D["알려진 digest<br/>내부 상태처럼 사용"] --> SUF["suffix 추가 · 금액=9000000"] --> T["위조된 새 tag"]
-    classDef bad fill:#fee2e2,stroke:#991b1b,stroke-width:2px
-    class T bad
-```
-> `tag = H(secret ‖ message)` 구조는 공격자가 secret을 몰라도 digest를 내부 상태처럼 써서 **뒤에 데이터를 이어 붙인 새 tag**를 만들 수 있다.
 - `tag = SHA-256(secret ‖ message)` (secret-prefix) 구조는 일부 해시에서 **안전하지 않음**.
 - **원리**: 공격자가 secret을 몰라도, 알려진 digest를 **내부 상태처럼** 사용해 **뒤에 데이터(suffix)를 이어 붙인 새 tag**를 계산 (`secret ‖ message ‖ 원래 padding ‖ suffix`).
 - 예: "받는사람=Bob,금액=1000" 뒤에 "금액=9000000"을 붙여 위조 (뒤 중복 field 우선 parser 가정).
@@ -176,18 +143,6 @@ flowchart LR
 ### HMAC ⭐ (구조와 수식)
 - `HMAC(K, m) = H((K' ⊕ opad) ‖ H((K' ⊕ ipad) ‖ m))`
 - **2단계**: inner hash `H((K'⊕ipad)‖m)` → outer hash `H((K'⊕opad)‖inner)`.
-```mermaid
-flowchart TB
-    K(["키 K"]) --> KP["K' = 블록크기 B에 맞춘 키"]
-    KP --> IP["K' ⊕ ipad"]
-    KP --> OP["K' ⊕ opad"]
-    M["메시지 m"] --> IN["inner = H((K'⊕ipad) ‖ m)"]
-    IP --> IN --> OUT["outer = H((K'⊕opad) ‖ inner)"]
-    OP --> OUT --> TAG["HMAC tag"]
-    classDef key fill:#dbeafe,stroke:#1e3a8a,stroke-width:2px
-    class K key
-```
-> 두 번 해시(inner→outer)로 감싸므로 digest만으로 뒤에 데이터를 이어 붙일 수 없다 → length extension 불가. (ipad=0x36×B, opad=0x5C×B 공개 고정값)
 - K' = K를 블록 크기 B에 맞춘 키. RFC 2104: ipad=0x36×B, opad=0x5C×B (공개 고정값). SHA-256 B=64바이트.
 - ⭐ **HMAC은 inner/outer hash를 분리하므로 length extension으로 연장 불가** (secret-prefix의 결함을 구조적으로 해결).
 - 예: 이체 요청 amount 변경 → 공격자는 새 tag 계산할 K가 없어 서버가 거부. (단, HMAC은 내용을 숨기지 않음 → 기밀성 필요하면 AEAD)
@@ -236,20 +191,6 @@ flowchart TB
 
 ### 로그인 검증 (복호가 아니라 '일치 확인') ⭐
 - TLS가 record 복호 → 서버가 password 받음 → salt·cost·verifier 조회 → 입력으로 candidate verifier 계산 → **constant-time 비교** → session 발급.
-```mermaid
-flowchart TB
-    PW["입력 비밀번호"] --> CALC["candidate = KDF(password, salt, cost)"]
-    DB["DB 조회 · salt·cost·verifier"] --> CALC
-    DB --> CMP
-    CALC --> CMP{"candidate == verifier ?<br/>constant-time 비교"}
-    CMP -->|일치| OK["세션 발급"]
-    CMP -->|불일치| NO["로그인 거부"]
-    classDef ok fill:#dcfce7,stroke:#166534,stroke-width:2px
-    classDef bad fill:#fee2e2,stroke:#991b1b,stroke-width:2px
-    class OK ok
-    class NO bad
-```
-> ⭐ 저장된 verifier를 **복호하지 않는다** — 입력으로 같은 KDF를 다시 돌려 **값이 같은지**만 확인.
 - ⭐ "복호하지 않는다"의 대상은 **password verifier**. 파일 복호가 필요하면 password와 **분리된 data-encryption key** 사용.
 
 ### Password KDF 비교
